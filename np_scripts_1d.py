@@ -12,7 +12,7 @@ bl_info = {
     'name': 'NP Anchor',
     'author': 'Okavango with CoDEmanX, lukas_t, matali, Blenderartists community',
     'version': (0, 1, 0),
-    'blender': (2, 78, 0),
+    'blender': (2, 79, 0),
     'location': 'View3D',
     'description': 'Translate objects using anchor and target points - install, assign shortcut, save user settings',
     'category': '3D View'}
@@ -47,7 +47,23 @@ class LayoutNPPanel(bpy.types.Panel):
         row.operator("object.np_anchor_translate_007", text='ZZ move')
         row = col.row(align=False)
         row.operator("object.np_point_copy_002", text='ZX copy')
+        row = col.row(align=False)
+        row.operator("object.np_test", text='Test')
 
+
+# Defining the main class - the macro:
+class NPTest(bpy.types.Operator):
+    bl_idname = 'object.np_test'
+    bl_label = 'NP TEST'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        print('='*100)
+        # bpy.ops.view3d.cursor3d()
+        # bpy.context.space_data.c
+        print(bpy.context.area.spaces.active.cursor_location)
+        print('='*100)
+        return {'FINISHED'}
 
 # Defining the main class - the macro:
 class NPAnchorTranslate007(bpy.types.Macro):
@@ -77,8 +93,8 @@ class Storage:
     flag = 'NONE'
     deltavec = Vector((0, 0, 0))
     deltavec_safe = Vector((0, 0, 0))
-    icon = [[23, 34], [23, 32], [19, 32], [19, 36], [21, 36], [21, 38], [25, 38], [25, 34], [23, 34], [23, 36],
-            [21, 36]]
+    icon = [[23, 34], [23, 32], [19, 32], [19, 36], [21, 36], [21, 38], [25, 38], [25, 34], [23, 34], [23, 36], [21, 36]]
+    cursor3d_location = None
 
 
 # Defining the first of the operational classes for aquiring the list of selected objects and storing them for later re-calls:
@@ -110,10 +126,15 @@ class NPATAddCursorDummy(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        bpy.ops.mesh.primitive_cube_add()
-        cdummy = bpy.context.object
-        cdummy.name = 'NP_AT_cdummy'
-        Storage.cdummy = cdummy
+        if not Storage.cursor3d_location:
+            Storage.cursor3d_location = bpy.context.area.spaces.active.cursor_location
+            print('======', Storage.cursor3d_location)
+
+        # bpy.ops.mesh.primitive_cube_add()
+        # cdummy = bpy.context.object
+        # cdummy.name = 'NP_AT_cdummy'
+        # Storage.cdummy = cdummy
+
         # print('020')
         return {'FINISHED'}
 
@@ -143,9 +164,13 @@ class NPATActivateCursorDummy(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        cdummy = Storage.cdummy
-        bpy.context.scene.objects.active = cdummy
-        Storage.cdummyloc = cdummy.location
+        # bpy.context.area.spaces.active.cursor_location = Storage.cursor3d_location
+        # bpy.ops.view3d.cursor3d()
+
+        # cdummy = Storage.cdummy
+        # bpy.context.scene.objects.active = cdummy
+        # Storage.cdummyloc = cdummy.location
+
         # print('040')
         return {'FINISHED'}
 
@@ -157,10 +182,13 @@ class NPATActivateAnchor(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        cdummy = Storage.cdummy
-        bpy.ops.object.select_all(action='DESELECT')
-        cdummy.select = True
-        bpy.ops.object.delete('EXEC_DEFAULT')
+        # cdummy = Storage.cdummy
+        # bpy.ops.object.select_all(action='DESELECT')
+        # cdummy.select = True
+        # bpy.ops.object.delete('EXEC_DEFAULT')
+
+        # bpy.context.area.spaces.active.cursor_location = Storage.cursor3d_location
+
         anchor = Storage.anchor
         bpy.context.scene.objects.active = anchor
         anchor.select = True
@@ -289,6 +317,10 @@ class NPATDeleteAnchor(bpy.types.Operator):
         bpy.context.tool_settings.snap_target = Storage.snap_target
         bpy.context.space_data.pivot_point = Storage.pivot_point
         bpy.context.space_data.transform_orientation = Storage.trans_orient
+        if Storage.cursor3d_location:
+            print('---------', Storage.cursor3d_location)
+            bpy.context.area.spaces.active.cursor_location = Storage.cursor3d_location
+            Storage.cursor3d_location = None
         return {'FINISHED'}
 
 
@@ -301,10 +333,10 @@ def scene_update_NPPC(context):
     # print('00_SceneUpdate_START')
 
     if bpy.data.objects.is_updated:
-        print('up1')
+        # print('up1')
         mode = Storage.mode
         flag = Storage.flag
-        print(mode, flag)
+        # print(mode, flag)
         take = Storage.take
         place = Storage.place
         if flag in ('RUNTRANSZERO', 'RUNTRANSFIRST', 'RUNTRANSNEXT', 'NAVTRANSZERO', 'NAVTRANSFIRST', 'NAVTRANSNEXT'):
@@ -1691,10 +1723,10 @@ def register():
 
     NPAnchorTranslate007.define('OBJECT_OT_np_at_get_selection')
     NPAnchorTranslate007.define('OBJECT_OT_np_at_add_cursor_dummy')
-    NPAnchorTranslate007.define('VIEW3D_OT_cursor3d')
+    # NPAnchorTranslate007.define('VIEW3D_OT_cursor3d')
     NPAnchorTranslate007.define('OBJECT_OT_np_at_add_anchor')
     NPAnchorTranslate007.define('OBJECT_OT_np_at_activate_cursor_dummy')
-    NPAnchorTranslate007.define('VIEW3D_OT_snap_cursor_to_active')
+    # NPAnchorTranslate007.define('VIEW3D_OT_snap_cursor_to_active')
     NPAnchorTranslate007.define('OBJECT_OT_np_at_activate_anchor')
     NPAnchorTranslate007.define('OBJECT_OT_np_at_run_translate')
     NPAnchorTranslate007.define('OBJECT_OT_np_at_reselect_stored')
