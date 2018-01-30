@@ -97,6 +97,8 @@ class Storage:
     __cursor3d_location = None
     __anchorname = '1D_NP_Place'
     __anchor = None
+    __anchoroffset = None
+    __selectionlocation = None
 
     @staticmethod
     def anchor():
@@ -112,7 +114,10 @@ class Storage:
             __class__.__anchor = bpy.data.objects[__class__.__anchorname]
         if __class__.__anchor.hide:
             __class__.__anchor.hide = False
-        # anchor to mouse_cursor
+        return __class__.__anchor
+
+    @staticmethod
+    def anchortomousecursor():
         __class__.savecursor3dposition()
         bpy.ops.view3d.cursor3d('INVOKE_DEFAULT')
         selections = bpy.context.selected_objects
@@ -122,7 +127,6 @@ class Storage:
         for obj in selections:
             obj.select = True
         __class__.restorecursor3dposition()
-        return __class__.__anchor
 
     @staticmethod
     def removeanchor(type='SOFT'):
@@ -146,6 +150,49 @@ class Storage:
         if __class__.__cursor3d_location:
             bpy.context.area.spaces.active.cursor_location = __class__.__cursor3d_location
             __class__.__cursor3d_location = None
+
+    @staticmethod
+    def fixanchoroffset():
+        # offset between selection and anchor
+        anchor = __class__.anchor()
+        __class__.__anchoroffset = anchor.location - __class__.__selectionlocation
+
+    @staticmethod
+    def fixselectionlocation():
+        __class__.savecursor3dposition()
+        selections = bpy.context.selected_objects
+        bpy.ops.object.select_all(action='DESELECT')
+        selob = Storage.selob
+        for ob in selob:
+            ob.select = True
+        bpy.ops.view3d.snap_cursor_to_selected()
+        __class__.__selectionlocation = Vector(bpy.context.area.spaces.active.cursor_location)
+        bpy.ops.object.select_all(action='DESELECT')
+        for obj in selections:
+            obj.select = True
+        __class__.restorecursor3dposition()
+
+    @staticmethod
+    def selectiontoanchor():
+        __class__.savecursor3dposition()
+        anchor = __class__.anchor()
+        bpy.context.area.spaces.active.cursor_location = list(anchor.location - __class__.__anchoroffset)
+        anchor.select = False
+        bpy.ops.view3d.snap_selected_to_cursor(use_offset=True)
+        anchor.select = True
+        __class__.restorecursor3dposition()
+
+    @staticmethod
+    def selectiontostartlocation():
+        __class__.savecursor3dposition()
+        bpy.context.area.spaces.active.cursor_location = list(__class__.__selectionlocation)
+        bpy.ops.object.select_all(action='DESELECT')
+        selob = Storage.selob
+        for ob in selob:
+            ob.select = True
+        bpy.ops.view3d.snap_selected_to_cursor(use_offset=True)
+        __class__.restorecursor3dposition()
+
 
 
 # Defining the first of the operational classes for aquiring the list of selected objects and storing them for later re-calls:
@@ -236,19 +283,29 @@ class NPATRunTranslate(bpy.types.Operator):
 
     def modal(self, context, event):
         self.count += 1
-        selob = Storage.selob
-        anchor = Storage.anchor()
+        Storage.anchortomousecursor()
         # print('080')
         if self.count == 1:
+            Storage.fixselectionlocation()
+            Storage.fixanchoroffset()
             bpy.ops.transform.translate('INVOKE_DEFAULT')
-        elif event.type in ('LEFTMOUSE', 'RET', 'NUMPAD_ENTER', 'SPACE') and event.value == 'RELEASE':
+        elif event.type in ('LEFTMOUSE', 'RET', 'NUMPAD_ENTER') and event.value == 'RELEASE':
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             return {'FINISHED'}
-        elif event.type in ('ESC', 'RIGHTMOUSE'):
+        elif event.type in ('SPACE'):
+            if event.value == 'RELEASE':
+                Storage.selectiontostartlocation()
+            elif event.value == 'PRESS':
+                Storage.selectiontoanchor()
+                bpy.ops.transform.translate('INVOKE_DEFAULT')
+                return {'INTERFACE'}
+        elif event.type in ('RIGHTMOUSE'):
+            Storage.selectiontoanchor()
+            bpy.ops.transform.translate('INVOKE_DEFAULT')
+        elif event.type in ('ESC'):
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             Storage.removeanchor('SOFT')
-            for ob in selob:
-                ob.select = True
+            Storage.selectiontostartlocation()
             bpy.context.tool_settings.use_snap = Storage.use_snap
             bpy.context.tool_settings.snap_element = Storage.snap_element
             bpy.context.tool_settings.snap_target = Storage.snap_target
