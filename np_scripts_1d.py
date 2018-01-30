@@ -94,15 +94,13 @@ class Storage:
     deltavec = Vector((0, 0, 0))
     deltavec_safe = Vector((0, 0, 0))
     icon = [[23, 34], [23, 32], [19, 32], [19, 36], [21, 36], [21, 38], [25, 38], [25, 34], [23, 34], [23, 36], [21, 36]]
-    cursor3d_location = None
+    __cursor3d_location = None
     __anchorname = '1D_NP_Place'
     __anchor = None
 
     @staticmethod
     def anchor():
-        if not __class__.__anchor or __class__.__anchor.name != __class__.__anchorname:
-            __class__.savecursor3dposition()
-            bpy.ops.view3d.cursor3d('INVOKE_DEFAULT')
+        if __class__.__anchorname not in bpy.data.objects:
             bpy.ops.mesh.primitive_cube_add(enter_editmode=True)
             bpy.ops.mesh.select_all
             bpy.ops.mesh.delete(type='VERT')
@@ -110,30 +108,44 @@ class Storage:
             __class__.__anchor = bpy.context.object
             __class__.__anchor.name = __class__.__anchorname
             __class__.__anchor.hide_render = True
-            __class__.restorecursor3dposition()
+        else:
+            __class__.__anchor = bpy.data.objects[__class__.__anchorname]
         if __class__.__anchor.hide:
             __class__.__anchor.hide = False
+        # anchor to mouse_cursor
+        __class__.savecursor3dposition()
+        bpy.ops.view3d.cursor3d('INVOKE_DEFAULT')
+        selections = bpy.context.selected_objects
+        bpy.ops.object.select_all(action='DESELECT')
+        __class__.__anchor.select = True
+        bpy.ops.view3d.snap_selected_to_cursor()
+        for obj in selections:
+            obj.select = True
+        __class__.restorecursor3dposition()
         return __class__.__anchor
 
     @staticmethod
     def removeanchor(type='SOFT'):
-        if __class__.__anchor:
+        if __class__.__anchor and __class__.__anchor.name == __class__.__anchorname:
             if type == 'SOFT':
                 __class__.__anchor.hide = True
             elif type == 'HARD':
+                selections = bpy.context.selected_objects
                 bpy.ops.object.select_all(action='DESELECT')
                 __class__.__anchor.select = True
                 bpy.ops.object.delete('EXEC_DEFAULT')
+                for obj in selections:
+                    obj.select = True
 
     @staticmethod
     def savecursor3dposition():
-        __class__.cursor3d_location = list(bpy.context.area.spaces.active.cursor_location)
+        __class__.__cursor3d_location = list(bpy.context.area.spaces.active.cursor_location)
 
     @staticmethod
     def restorecursor3dposition():
-        if __class__.cursor3d_location:
-            bpy.context.area.spaces.active.cursor_location = __class__.cursor3d_location
-            __class__.cursor3d_location = None
+        if __class__.__cursor3d_location:
+            bpy.context.area.spaces.active.cursor_location = __class__.__cursor3d_location
+            __class__.__cursor3d_location = None
 
 
 # Defining the first of the operational classes for aquiring the list of selected objects and storing them for later re-calls:
@@ -156,53 +168,6 @@ class NPATGetSelection(bpy.types.Operator):
         for ob in selob:
             ob.select = False
         return {'FINISHED'}
-
-
-# Defining the operator that will add a dummy object on the original point of cursor location. 3D cursor will leave this position, go to the pointer, serve as an anchor generation location and come back, so there needs to be an object to safeguard his original position. After that, this dummy gets deleted:
-# class NPATAddCursorDummy(bpy.types.Operator):
-#     bl_idname = 'object.np_at_add_cursor_dummy'
-#     bl_label = 'NP AT Add Cursor Dummy'
-#     bl_options = {'INTERNAL'}
-#
-#     def execute(self, context):
-#         # Storage.cursor3d_location = list(bpy.context.area.spaces.active.cursor_location)
-#         Storage.savecursor3dposition()
-#         # print('020')
-#         return {'FINISHED'}
-
-
-# Defining the operator that will generate a one-vertex mesh i call anchor, at the spot marked by 3d cursor:
-# class NPATAddAnchor(bpy.types.Operator):
-#     bl_idname = 'object.np_at_add_anchor'
-#     bl_label = 'NP AT Add Anchor'
-#     bl_options = {'INTERNAL'}
-#
-#     def execute(self, context):
-#         if not Storage.anchor:
-#             bpy.ops.mesh.primitive_cube_add(enter_editmode=True)
-#             bpy.ops.mesh.select_all
-#             bpy.ops.mesh.delete(type='VERT')
-#             bpy.ops.object.mode_set(mode='OBJECT')
-#             anchor = bpy.context.object
-#             # anchor.name = 'NP_AT_anchor'
-#             anchor.name = '1D_NP_Place'
-#             Storage.anchor = anchor
-#         # print('030')
-#         return {'FINISHED'}
-
-
-# Activating dummy object for 3D cursor's return home:
-# class NPATActivateCursorDummy(bpy.types.Operator):
-#     bl_idname = 'object.np_at_activate_cursor_dummy'
-#     bl_label = 'NP AT Activate Cursor Dummy'
-#     bl_options = {'INTERNAL'}
-#
-#     def execute(self, context):
-#         # if Storage.cursor3d_location:
-#         #     bpy.context.area.spaces.active.cursor_location = Storage.cursor3d_location
-#         Storage.restorecursor3dposition()
-#         # print('040')
-#         return {'FINISHED'}
 
 
 # Deleting dummy object and activating anchor for it's use in the select-point process:
@@ -281,9 +246,6 @@ class NPATRunTranslate(bpy.types.Operator):
             return {'FINISHED'}
         elif event.type in ('ESC', 'RIGHTMOUSE'):
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-            # bpy.ops.object.select_all(action='DESELECT')
-            # anchor.select = True
-            # bpy.ops.object.delete('EXEC_DEFAULT')
             Storage.removeanchor('SOFT')
             for ob in selob:
                 ob.select = True
@@ -329,14 +291,7 @@ class NPATDeleteAnchor(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        selob = Storage.selob
-        anchor = Storage.anchor()
-        # bpy.ops.object.select_all(action='DESELECT')
-        # anchor.select = True
-        # bpy.ops.object.delete('EXEC_DEFAULT')
         Storage.removeanchor('SOFT')
-        for ob in selob:
-            ob.select = True
         bpy.context.tool_settings.use_snap = Storage.use_snap
         bpy.context.tool_settings.snap_element = Storage.snap_element
         bpy.context.tool_settings.snap_target = Storage.snap_target
@@ -345,7 +300,7 @@ class NPATDeleteAnchor(bpy.types.Operator):
         return {'FINISHED'}
 
 
-# -----------------------------------
+# -----------------------------------,
 
 # Defining the scene update algorithm that will track the positions of the object during modal transforms, which is otherwise impossible:
 
@@ -1743,11 +1698,6 @@ def register():
     bpy.app.handlers.scene_update_post.append(scene_update_NPPC)
 
     NPAnchorTranslate007.define('OBJECT_OT_np_at_get_selection')
-    # NPAnchorTranslate007.define('OBJECT_OT_np_at_add_cursor_dummy')
-    # NPAnchorTranslate007.define('VIEW3D_OT_cursor3d')
-    # NPAnchorTranslate007.define('OBJECT_OT_np_at_add_anchor')
-    # NPAnchorTranslate007.define('OBJECT_OT_np_at_activate_cursor_dummy')
-    # NPAnchorTranslate007.define('VIEW3D_OT_snap_cursor_to_active')
     NPAnchorTranslate007.define('OBJECT_OT_np_at_activate_anchor')
     NPAnchorTranslate007.define('OBJECT_OT_np_at_run_translate')
     NPAnchorTranslate007.define('OBJECT_OT_np_at_reselect_stored')
