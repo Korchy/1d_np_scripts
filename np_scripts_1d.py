@@ -544,12 +544,6 @@ class NPPCRunTrans(bpy.types.Operator):
                 Storage.ar13d = copy.deepcopy(take.location)
                 Storage.ar23d = copy.deepcopy(place.location)
                 place.select = False
-                bpy.ops.object.delete('EXEC_DEFAULT')
-                for ob in Storage.selob:
-                    ob.select = True
-                bpy.ops.object.duplicate(linked=True)
-                value = (place.location - Storage.firsttake3d).to_tuple(4)
-                bpy.ops.transform.translate(value=value)
                 bpy.ops.object.duplicate()
                 prevob = Storage.prevob
                 nextob = Storage.nextob
@@ -558,7 +552,6 @@ class NPPCRunTrans(bpy.types.Operator):
                 Storage.nextob = bpy.context.selected_objects
                 take.location = copy.deepcopy(place.location)
                 place.select = True
-                bpy.context.scene.objects.active = place
                 Storage.flag = 'RUNTRANSNEXT_break'
             elif flag == 'RUNTRANSNEXT':
                 Storage.deltavec_safe = copy.deepcopy(Storage.deltavec)
@@ -566,12 +559,6 @@ class NPPCRunTrans(bpy.types.Operator):
                 Storage.ar13d = copy.deepcopy(take.location)
                 Storage.ar23d = copy.deepcopy(place.location)
                 place.select = False
-                bpy.ops.object.delete('EXEC_DEFAULT')
-                for ob in Storage.selob:
-                    ob.select = True
-                bpy.ops.object.duplicate(linked=True)
-                value = (place.location - Storage.firsttake3d).to_tuple(4)
-                bpy.ops.transform.translate(value=value)
                 bpy.ops.object.duplicate()
                 prevob = Storage.prevob
                 nextob = Storage.nextob
@@ -606,6 +593,12 @@ class NPPCRunTrans(bpy.types.Operator):
                 Storage.ar13d = copy.deepcopy(take.location)
                 Storage.ar23d = copy.deepcopy(place.location)
                 place.select = False
+                bpy.ops.object.delete('EXEC_DEFAULT')
+                for ob in Storage.selob:
+                    ob.select = True
+                bpy.ops.object.duplicate(linked=True)
+                value = (place.location - Storage.firsttake3d).to_tuple(4)
+                bpy.ops.transform.translate(value=value)
                 bpy.ops.object.duplicate()
                 prevob = Storage.prevob
                 nextob = Storage.nextob
@@ -614,6 +607,7 @@ class NPPCRunTrans(bpy.types.Operator):
                 Storage.nextob = bpy.context.selected_objects
                 take.location = copy.deepcopy(place.location)
                 place.select = True
+                bpy.context.scene.objects.active = place
                 Storage.flag = 'RUNTRANSNEXT_break'
             elif flag == 'RUNTRANSNEXT':
                 Storage.deltavec_safe = copy.deepcopy(Storage.deltavec)
@@ -621,6 +615,12 @@ class NPPCRunTrans(bpy.types.Operator):
                 Storage.ar13d = copy.deepcopy(take.location)
                 Storage.ar23d = copy.deepcopy(place.location)
                 place.select = False
+                bpy.ops.object.delete('EXEC_DEFAULT')
+                for ob in Storage.selob:
+                    ob.select = True
+                bpy.ops.object.duplicate(linked=True)
+                value = (place.location - Storage.firsttake3d).to_tuple(4)
+                bpy.ops.transform.translate(value=value)
                 bpy.ops.object.duplicate()
                 prevob = Storage.prevob
                 nextob = Storage.nextob
