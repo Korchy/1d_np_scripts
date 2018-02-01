@@ -15,3 +15,8 @@ Modifications:
     - Pressing space button on the navigation mode (scene scrolling/rotation). Another pressing space button returns to the moving mode
 - ZX Copy
     - Changed each other the default copying mode (with and without alt button). By default the instance of the object creates, with pressing alt button - the full copy of the object creates.
+
+Version history:
+-
+**v.0.0.0.**
+- Dev start
