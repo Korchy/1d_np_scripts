@@ -47,23 +47,7 @@ class LayoutNPPanel(bpy.types.Panel):
         row.operator("object.np_anchor_translate_007", text='ZZ move')
         row = col.row(align=False)
         row.operator("object.np_point_copy_002", text='ZX copy')
-        row = col.row(align=False)
-        row.operator("object.np_test", text='Test')
 
-
-# Defining the main class - the macro:
-class NPTest(bpy.types.Operator):
-    bl_idname = 'object.np_test'
-    bl_label = 'NP TEST'
-    bl_options = {'REGISTER', 'UNDO'}
-
-    def execute(self, context):
-        print('='*100)
-        # bpy.ops.view3d.cursor3d()
-        # bpy.context.space_data.c
-        print(bpy.context.area.spaces.active.cursor_location)
-        print('='*100)
-        return {'FINISHED'}
 
 # Defining the main class - the macro:
 class NPAnchorTranslate007(bpy.types.Macro):
