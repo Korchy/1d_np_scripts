@@ -99,6 +99,7 @@ class Storage:
     __anchor = None
     __anchoroffset = None
     __selectionlocation = None
+    __mode = ['NONE']   # list with NONE, TRANSLATE, NAVIGATE
 
     @staticmethod
     def anchor():
@@ -114,6 +115,8 @@ class Storage:
             __class__.__anchor = bpy.data.objects[__class__.__anchorname]
         if __class__.__anchor.hide:
             __class__.__anchor.hide = False
+        if not __class__.__anchor.layers[bpy.context.screen.scene.active_layer]:
+            __class__.__anchor.layers[bpy.context.screen.scene.active_layer] = True
         return __class__.__anchor
 
     @staticmethod
@@ -193,7 +196,17 @@ class Storage:
         bpy.ops.view3d.snap_selected_to_cursor(use_offset=True)
         __class__.restorecursor3dposition()
 
+    @staticmethod
+    def getmode(offset=0):
+        return __class__.__mode[-1 + offset]
 
+    @staticmethod
+    def setmode(mode):
+        __class__.__mode.append(mode)
+
+    @staticmethod
+    def clear():
+        __class__.__mode = ['NONE']
 
 # Defining the first of the operational classes for aquiring the list of selected objects and storing them for later re-calls:
 class NPATGetSelection(bpy.types.Operator):
@@ -283,28 +296,39 @@ class NPATRunTranslate(bpy.types.Operator):
 
     def modal(self, context, event):
         self.count += 1
-        Storage.anchortomousecursor()
+        if Storage.getmode() == 'NONE':
+            Storage.anchortomousecursor()
         # print('080')
         if self.count == 1:
-            Storage.fixselectionlocation()
-            Storage.fixanchoroffset()
+            if Storage.getmode() == 'SELECT':
+                Storage.fixselectionlocation()
+                Storage.fixanchoroffset()
+                Storage.setmode('TRANSLATE')
+            elif Storage.getmode() == 'NONE':
+                Storage.setmode('SELECT')
             bpy.ops.transform.translate('INVOKE_DEFAULT')
         elif event.type in ('LEFTMOUSE', 'RET', 'NUMPAD_ENTER') and event.value == 'RELEASE':
+            if Storage.getmode() == 'TRANSLATE':
+                Storage.clear()
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             return {'FINISHED'}
         elif event.type in ('SPACE'):
             if event.value == 'RELEASE':
+                Storage.setmode('NAVIGATE')
                 Storage.selectiontostartlocation()
             elif event.value == 'PRESS':
+                Storage.setmode(Storage.getmode(-1))
                 Storage.selectiontoanchor()
                 bpy.ops.transform.translate('INVOKE_DEFAULT')
                 return {'INTERFACE'}
         elif event.type in ('RIGHTMOUSE'):
-            Storage.selectiontoanchor()
-            bpy.ops.transform.translate('INVOKE_DEFAULT')
+            if Storage.getmode() != 'NAVIGATE':
+                # Storage.selectiontoanchor()
+                bpy.ops.transform.translate('INVOKE_DEFAULT')
         elif event.type in ('ESC'):
+            Storage.clear()
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-            Storage.removeanchor('SOFT')
+            # Storage.removeanchor('SOFT')
             Storage.selectiontostartlocation()
             bpy.context.tool_settings.use_snap = Storage.use_snap
             bpy.context.tool_settings.snap_element = Storage.snap_element
@@ -348,7 +372,7 @@ class NPATDeleteAnchor(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        Storage.removeanchor('SOFT')
+        # Storage.removeanchor('SOFT')
         bpy.context.tool_settings.use_snap = Storage.use_snap
         bpy.context.tool_settings.snap_element = Storage.snap_element
         bpy.context.tool_settings.snap_target = Storage.snap_target
